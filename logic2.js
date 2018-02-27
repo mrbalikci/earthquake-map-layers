@@ -1,19 +1,13 @@
-var myMap = L.map("map").setView([14.60, -28.67], 2.5);
-
-// Add a tile layer
-L.tileLayer(
-    "https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.png?" +
-    "access_token=pk.eyJ1IjoibXJiYWxpa2NpIiwiYSI6ImNqZGhqeWFxdTEwamgycXBneTZnYjFzcm0ifQ."
-    + "RXRxgZ1Mb6ND-9EYWu_5hA"
-).addTo(myMap);
-
 var queryUrl = "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_week.geojson";
 
 console.log(queryUrl)
 // Perform a GET request to the query URL
+var quakeMarkers = []
+
 d3.json(queryUrl, function (data) {
 
     for (var i = 0; i < data.features.length; i++) {
+
         var location = data.features[i].geometry.coordinates;
         var info = data.features[i].properties.place;
         var date = data.features[i].properties.time;
@@ -30,19 +24,58 @@ d3.json(queryUrl, function (data) {
                                         '#FFEDA0';
         }
 
-        L.circle(([location[1], location[0]]), {
+        quakeMarkers.push(
+            L.circle(([location[1], location[0]]), {
             stroke: false,
             fillColor: getColor(size),
             fillOpacity: .75,
-            radius: size * 100000
-
-        }).bindPopup("<h3><center>" + info + " Magnitude " + size +
-        "</center></h3><hr><p><center>" + new Date(date) + "</center></p>").addTo(myMap);
+            radius: 40
+        }))
     }
-
 })
 
-// Legent Work 
+console.log(`markers ` + quakeMarkers)
+
+var satellite = L.tileLayer(
+    "https://api.mapbox.com/v4/mapbox.satellite/{z}/{x}/{y}.png?" +
+    "access_token=pk.eyJ1IjoibXJiYWxpa2NpIiwiYSI6ImNqZGhqeWFxdTEwamgycXBneTZnYjFzcm0ifQ."
+    + "RXRxgZ1Mb6ND-9EYWu_5hA");
+
+var darkmap = L.tileLayer(
+    "https://api.mapbox.com/styles/v1/mapbox/dark-v9/tiles/256/{z}/{x}/{y}?" +
+    "access_token=pk.eyJ1IjoibXJiYWxpa2NpIiwiYSI6ImNqZGhqeWFxdTEwamgycXBneTZnYjFzcm0ifQ."
+    + "RXRxgZ1Mb6ND-9EYWu_5hA");
+
+var streetmap = L.tileLayer(
+    "https://api.mapbox.com/styles/v1/mapbox/outdoors-v10/tiles/256/{z}/{x}/{y}?" +
+    "access_token=pk.eyJ1IjoibXJiYWxpa2NpIiwiYSI6ImNqZGhqeWFxdTEwamgycXBneTZnYjFzcm0ifQ."
+    + "RXRxgZ1Mb6ND-9EYWu_5hA");
+
+var quakes = L.layerGroup(quakeMarkers)
+
+// console.log(quakes)
+
+var baseMaps = {
+    "Satellite Map": satellite,
+    "Street Map": streetmap,
+    "Dark Map": darkmap
+};
+
+var overlayMaps = {
+    "Earthquakes": quakes,
+}
+
+var myMap = L.map("map", {
+    center: [14.60, -28.67],
+    zoom: 2,
+    layers: [satellite, quakes]
+  });
+
+L.control.layers(baseMaps, overlayMaps, {
+    collapsed: false
+}).addTo(myMap);
+
+// Legend Work 
 function getColor(d) {
     return d > 7 ? '#800026' :
         d > 6 ? '#BD0026' :
